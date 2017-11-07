@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"log"
@@ -65,12 +67,19 @@ func main() {
 		log.Fatal(err, " :unable to read image build response")
 	}
 
+	auth := types.AuthConfig{
+		Username: shenshengkafei,
+		Password: SudoPassword321,
+	}
+	authBytes, _ := json.Marshal(auth)
+	authBase64 := base64.URLEncoding.EncodeToString(authBytes)
+
 	imagePushResponse, err := cli.ImagePush(
 		context.Background(),
 		"shenshengkafei/imagename",
 		types.ImagePushOptions{
 			All:          true,
-			RegistryAuth: "123",
+			RegistryAuth: authBase64,
 		})
 	if err != nil {
 		log.Fatal(err, " :unable to push docker image")
