@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/tar"
-	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -22,7 +21,7 @@ func main() {
 		log.Fatal(err, " :unable to init client")
 	}
 
-	destinationfile := "Dockerfile"
+	destinationfile := "tarball.tar"
 	sourcedir := "/home/shenshengkafei/swagger/src/IO.Swagger/"
 
 	dir, err := os.Open(sourcedir)
@@ -31,8 +30,13 @@ func main() {
 	// get list of files
 	files, err := dir.Readdir(0)
 
-	buf := new(bytes.Buffer)
-	tarfileWriter := tar.NewWriter(buf)
+	// create tar file
+	tarfile, err := os.Create(destinationfile)
+	defer tarfile.Close()
+
+	var fileWriter io.WriteCloser = tarfile
+
+	tarfileWriter := tar.NewWriter(fileWriter)
 	defer tarfileWriter.Close()
 
 	for _, fileInfo := range files {
@@ -59,14 +63,14 @@ func main() {
 		_, err = io.Copy(tarfileWriter, file)
 	}
 
-	dockerFileTarReader := bytes.NewReader(buf.Bytes())
+	var fileReader io.ReadCloser = tarfile
 
 	imageBuildResponse, err := cli.ImageBuild(
 		ctx,
-		dockerFileTarReader,
+		fileReader,
 		types.ImageBuildOptions{
 			Tags:       []string{"shenshengkafei/imagename"},
-			Context:    dockerFileTarReader,
+			Context:    fileReader,
 			Dockerfile: destinationfile,
 			Remove:     true})
 	if err != nil {
