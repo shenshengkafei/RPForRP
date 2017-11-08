@@ -7,9 +7,9 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -22,32 +22,43 @@ func main() {
 		log.Fatal(err, " :unable to init client")
 	}
 
+	destinationfile := "Dockerfile"
+	sourcedir := "/home/shenshengkafei/swagger/src/IO.Swagger/"
+
+	dir, err := os.Open(sourcedir)
+	defer dir.Close()
+
+	// get list of files
+	files, err := dir.Readdir(0)
+
 	buf := new(bytes.Buffer)
-	tw := tar.NewWriter(buf)
-	defer tw.Close()
+	tarfileWriter := tar.NewWriter(buf)
+	defer tarfileWriter.Close()
 
-	dockerFile := "myDockerfile"
-	dockerFileReader, err := os.Open("/home/shenshengkafei/swagger/src/IO.Swagger/Dockerfile")
-	if err != nil {
-		log.Fatal(err, " :unable to open Dockerfile")
-	}
-	readDockerFile, err := ioutil.ReadAll(dockerFileReader)
-	if err != nil {
-		log.Fatal(err, " :unable to read dockerfile")
+	for _, fileInfo := range files {
+
+		if fileInfo.IsDir() {
+			continue
+		}
+
+		file, err := os.Open(dir.Name() + string(filepath.Separator) + fileInfo.Name())
+		if err != nil {
+			log.Fatal(err, " :unable to open file in source directory.")
+		}
+		defer file.Close()
+
+		// prepare the tar header
+		header := new(tar.Header)
+		header.Name = file.Name()
+		header.Size = fileInfo.Size()
+		header.Mode = int64(fileInfo.Mode())
+		header.ModTime = fileInfo.ModTime()
+
+		err = tarfileWriter.WriteHeader(header)
+
+		_, err = io.Copy(tarfileWriter, file)
 	}
 
-	tarHeader := &tar.Header{
-		Name: dockerFile,
-		Size: int64(len(readDockerFile)),
-	}
-	err = tw.WriteHeader(tarHeader)
-	if err != nil {
-		log.Fatal(err, " :unable to write tar header")
-	}
-	_, err = tw.Write(readDockerFile)
-	if err != nil {
-		log.Fatal(err, " :unable to write tar body")
-	}
 	dockerFileTarReader := bytes.NewReader(buf.Bytes())
 
 	imageBuildResponse, err := cli.ImageBuild(
@@ -56,7 +67,7 @@ func main() {
 		types.ImageBuildOptions{
 			Tags:       []string{"shenshengkafei/imagename"},
 			Context:    dockerFileTarReader,
-			Dockerfile: dockerFile,
+			Dockerfile: destinationfile,
 			Remove:     true})
 	if err != nil {
 		log.Fatal(err, " :unable to build docker image")
@@ -68,8 +79,8 @@ func main() {
 	}
 
 	auth := types.AuthConfig{
-		Username: shenshengkafei,
-		Password: SudoPassword321,
+		Username: "shenshengkafei",
+		Password: "SudoPassword321",
 	}
 	authBytes, _ := json.Marshal(auth)
 	authBase64 := base64.URLEncoding.EncodeToString(authBytes)
