@@ -22,7 +22,7 @@ func main() {
 	}
 
 	destinationfile := "tarball.tar"
-	sourcedir := "/home/shenshengkafei/swagger/src/IO.Swagger/"
+	sourcedir := "/home/shenshengkafei/swagger/src/IO.Swagger"
 
 	dir, err := os.Open(sourcedir)
 	defer dir.Close()
@@ -53,7 +53,7 @@ func main() {
 
 		// prepare the tar header
 		header := new(tar.Header)
-		header.Name = file.Name()
+		header.Name = fileInfo.Name()
 		header.Size = fileInfo.Size()
 		header.Mode = int64(fileInfo.Mode())
 		header.ModTime = fileInfo.ModTime()
