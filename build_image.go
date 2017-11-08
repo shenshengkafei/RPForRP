@@ -100,6 +100,7 @@ func main() {
 			Tags:       []string{"shenshengkafei/imagename"},
 			Context:    dockerFileTarReader,
 			Dockerfile: dockerFile,
+			NoCache:    true,
 			Remove:     true})
 	if err != nil {
 		log.Fatal(err, " :unable to build docker image")
